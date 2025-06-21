@@ -1,0 +1,110 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Orbitron', sans-serif;
+}
+
+body, html {
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+  background-color: #0a0a0a;
+}
+
+/* Fondo oscuro sutil */
+.fondo {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(ellipse at center, #111 0%, #000 100%);
+  z-index: -2;
+}
+
+/* Marco con efecto arcoíris animado */
+.borde-arcoiris {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 4px;
+  border-radius: 20px;
+  background: linear-gradient(270deg, #ff0080, #00ffff, #8000ff, #ff0080);
+  background-size: 600% 600%;
+  animation: arcoiris 8s linear infinite;
+}
+
+@keyframes arcoiris {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Contenedor interno con efecto vidrio */
+.contenedor-registro {
+  background: rgba(0,0,0,0.85);
+  padding: 40px;
+  border-radius: 16px;
+  width: 350px;
+  box-shadow: 0 0 30px rgba(0,255,255,0.1);
+  backdrop-filter: blur(10px);
+}
+
+.contenedor-registro h2 {
+  text-align: center;
+  color: #fff;
+  text-shadow: 0 0 10px #ff00cc;
+  margin-bottom: 25px;
+}
+
+.contenedor-registro input {
+  width: 100%;
+  padding: 12px;
+  margin: 10px 0;
+  border: none;
+  border-radius: 8px;
+  background: #1e1e1e;
+  color: #fff;
+  font-size: 15px;
+  box-shadow: inset 0 0 6px rgba(255,0,255,0.2);
+  outline: none;
+}
+
+.contenedor-registro button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 20px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(90deg, #ff00cc, #00f0ff);
+  color: #fff;
+  font-size: 17px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 0 12px rgba(255,255,255,0.3);
+  transition: all 0.3s ease;
+}
+
+.contenedor-registro button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 20px rgba(255,0,255,0.7);
+}
+
+/* Enlace de vuelta al login */
+.login-link {
+  margin-top: 20px;
+  text-align: center;
+  color: #ccc;
+  font-size: 14px;
+}
+
+.login-link a {
+  color: #00ffff;
+  text-decoration: none;
+  font-weight: bold;
+  transition: color 0.3s;
+}
+
+.login-link a:hover {
+  color: #ff00cc;
+}

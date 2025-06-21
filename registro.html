@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Registro Sofisticado</title>
+  <link rel="stylesheet" href="registro.css">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
+  <style>
+    /* Puedes mover esto a tu archivo registro.css si lo deseas */
+    button[type="submit"] {
+      background: linear-gradient(90deg, #00f2ff, #7d2ae8);
+      border: none;
+      color: white;
+      padding: 12px 20px;
+      width: 100%;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 16px;
+      font-weight: bold;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: 0.3s ease-in-out;
+      margin-top: 15px;
+    }
+
+    button[type="submit"]:hover {
+      background: linear-gradient(90deg, #7d2ae8, #00f2ff);
+      transform: scale(1.03);
+    }
+  </style>
+</head>
+<body>
+  <div class="fondo"></div>
+
+  <div class="borde-arcoiris">
+    <div class="contenedor-registro">
+      <h2>Crear Cuenta</h2>
+      <!-- Formulario con acción hacia el archivo PHP y método POST -->
+      <form action="registrar.php" method="POST">
+        <input type="text" name="nombre_completo" placeholder="Nombre completo" required>
+        <input type="email" name="correo" placeholder="Correo electrónico" required>
+        <input type="text" name="nombre_usuario" placeholder="Nombre de usuario" required>
+        <input type="password" name="contrasena" placeholder="Contraseña" required>
+        <input type="password" name="confirmar" placeholder="Confirmar contraseña" required>
+        <button type="submit">Registrarse</button>
+      </form>
+      <div class="login-link">
+        ¿Ya tienes cuenta? <a href="login.html">Inicia sesión</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
