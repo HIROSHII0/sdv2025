@@ -1,0 +1,26 @@
+
+
+
+
+
+Input recibido: 
+Error JSON: Syntax error
+---------- Nueva solicitud ----------
+Usuario autenticado: 1
+Datos recibidos: 
+Error JSON: Syntax error - Input: 
+---------- Nueva solicitud ----------
+Usuario autenticado: 1
+Datos recibidos: 
+Error JSON: Syntax error - Input: 
+---------- Nueva solicitud ----------
+Usuario autenticado: 1
+Datos recibidos: {"id":null,"accion":"ocultar"}
+Datos decodificados: Array
+(
+    [id] => 
+    [accion] => ocultar
+)
+
+ID: , Acción: ocultar
+Error: Datos inválidos. ID: , Acción: ocultar

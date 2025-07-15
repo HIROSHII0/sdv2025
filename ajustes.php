@@ -10,30 +10,58 @@ if (!isset($_SESSION['usuario_id'])) {
 $usuario_id = $_SESSION['usuario_id'];
 $mensaje = "";
 
+// Inicializar array de datos con valores por defecto (sin correo editable)
+$datos = [
+    'nombre_completo' => '',
+    'correo' => '',
+    'telefono_movil' => '',
+    'telefono_casa' => '',
+    'direccion' => '',
+    'ciudad' => '',
+    'provincia' => '',
+    'pais' => '',
+    'codigo_postal' => '',
+    'genero' => '',
+    'fecha_nacimiento' => '',
+    'estado_civil' => '',
+    'tipo_documento' => '',
+    'numero_documento' => '',
+    'ocupacion' => '',
+    'empresa' => '',
+    'nivel_educativo' => '',
+    'biografia' => '',
+    'foto_perfil' => ''
+];
+
 $upload_dir = __DIR__ . '/uploads/';
 if (!is_dir($upload_dir)) {
     mkdir($upload_dir, 0755, true);
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $telefono_movil = $_POST['telefono_movil'] ?? '';
-    $telefono_casa = $_POST['telefono_casa'] ?? '';
-    $direccion = $_POST['direccion'] ?? '';
-    $provincia = $_POST['provincia'] ?? '';
-    $ciudad = $_POST['ciudad'] ?? '';
-    $pais = $_POST['pais'] ?? '';
-    $codigo_postal = $_POST['codigo_postal'] ?? '';
-    $fecha_nacimiento = $_POST['fecha_nacimiento'] ?? '';
-    $genero = $_POST['genero'] ?? '';
-    $estado_civil = $_POST['estado_civil'] ?? '';
-    $tipo_documento = $_POST['tipo_documento'] ?? '';
-    $numero_documento = $_POST['numero_documento'] ?? '';
-    $ocupacion = $_POST['ocupacion'] ?? '';
-    $empresa = $_POST['empresa'] ?? '';
-    $nivel_educativo = $_POST['nivel_educativo'] ?? '';
-    $biografia = $_POST['biografia'] ?? '';
+    // Recoger datos del formulario (sin correo editable)
+    $datos_post = [
+        'nombre_completo' => $_POST['nombre_completo'] ?? '',
+        'telefono_movil' => $_POST['telefono_movil'] ?? '',
+        'telefono_casa' => $_POST['telefono_casa'] ?? '',
+        'direccion' => $_POST['direccion'] ?? '',
+        'ciudad' => $_POST['ciudad'] ?? '',
+        'provincia' => $_POST['provincia'] ?? '',
+        'pais' => $_POST['pais'] ?? '',
+        'codigo_postal' => $_POST['codigo_postal'] ?? '',
+        'fecha_nacimiento' => $_POST['fecha_nacimiento'] ?? '',
+        'genero' => $_POST['genero'] ?? '',
+        'estado_civil' => $_POST['estado_civil'] ?? '',
+        'tipo_documento' => $_POST['tipo_documento'] ?? '',
+        'numero_documento' => $_POST['numero_documento'] ?? '',
+        'ocupacion' => $_POST['ocupacion'] ?? '',
+        'empresa' => $_POST['empresa'] ?? '',
+        'nivel_educativo' => $_POST['nivel_educativo'] ?? '',
+        'biografia' => $_POST['biografia'] ?? '',
+        'foto_perfil' => $datos['foto_perfil'] // Mantener el valor actual por defecto
+    ];
 
-    $foto_perfil = null;
+    // Procesar foto de perfil
     if (isset($_FILES['foto_perfil']) && $_FILES['foto_perfil']['error'] === UPLOAD_ERR_OK) {
         $file_tmp = $_FILES['foto_perfil']['tmp_name'];
         $file_name = basename($_FILES['foto_perfil']['name']);
@@ -45,7 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $target_path = $upload_dir . $new_name;
 
             if (move_uploaded_file($file_tmp, $target_path)) {
-                $foto_perfil = "uploads/" . $new_name;
+                $datos_post['foto_perfil'] = "uploads/" . $new_name;
             } else {
                 $mensaje = "Error al subir la foto.";
             }
@@ -54,47 +82,110 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    $sql_check = "SELECT id, foto_perfil FROM datos_usuarios WHERE usuario_id = ?";
+    // Verificar si ya existen datos del usuario
+    $sql_check = "SELECT id, correo, foto_perfil FROM datos_usuarios WHERE usuario_id = ?";
     $stmt = $conn->prepare($sql_check);
     $stmt->bind_param("i", $usuario_id);
     $stmt->execute();
     $stmt->store_result();
-    $stmt->bind_result($id, $foto_actual);
+    $stmt->bind_result($id, $correo_actual, $foto_actual);
     $stmt->fetch();
 
     if ($stmt->num_rows > 0) {
-        if (!$foto_perfil) $foto_perfil = $foto_actual;
+        // Actualizar datos existentes (correo se mantiene igual)
+        if (empty($datos_post['foto_perfil'])) {
+            $datos_post['foto_perfil'] = $foto_actual;
+        }
 
-        $sql_update = "UPDATE datos_usuarios SET telefono_movil=?, telefono_casa=?, direccion=?, provincia=?, ciudad=?, pais=?, codigo_postal=?, fecha_nacimiento=?, genero=?, estado_civil=?, tipo_documento=?, numero_documento=?, ocupacion=?, empresa=?, nivel_educativo=?, biografia=?, foto_perfil=? WHERE usuario_id=?";
+        $sql_update = "UPDATE datos_usuarios SET 
+            nombre_completo=?, telefono_movil=?, telefono_casa=?, 
+            direccion=?, ciudad=?, provincia=?, pais=?, codigo_postal=?, 
+            fecha_nacimiento=?, genero=?, estado_civil=?, tipo_documento=?, 
+            numero_documento=?, ocupacion=?, empresa=?, nivel_educativo=?, 
+            biografia=?, foto_perfil=? 
+            WHERE usuario_id=?";
+        
         $stmt_update = $conn->prepare($sql_update);
-        $stmt_update->bind_param("sssssssssssssssssi", $telefono_movil, $telefono_casa, $direccion, $provincia, $ciudad, $pais, $codigo_postal, $fecha_nacimiento, $genero, $estado_civil, $tipo_documento, $numero_documento, $ocupacion, $empresa, $nivel_educativo, $biografia, $foto_perfil, $usuario_id);
+        $stmt_update->bind_param("ssssssssssssssssssi", 
+            $datos_post['nombre_completo'], $datos_post['telefono_movil'], 
+            $datos_post['telefono_casa'], $datos_post['direccion'], $datos_post['ciudad'], 
+            $datos_post['provincia'], $datos_post['pais'], $datos_post['codigo_postal'], 
+            $datos_post['fecha_nacimiento'], $datos_post['genero'], $datos_post['estado_civil'], 
+            $datos_post['tipo_documento'], $datos_post['numero_documento'], 
+            $datos_post['ocupacion'], $datos_post['empresa'], $datos_post['nivel_educativo'], 
+            $datos_post['biografia'], $datos_post['foto_perfil'], $usuario_id);
+        
         if ($stmt_update->execute()) {
             $mensaje = "Datos actualizados correctamente.";
+            $datos = $datos_post; // Actualizar array de datos con los nuevos valores
+            $datos['correo'] = $correo_actual; // Mantener correo original en datos
         } else {
-            $mensaje = "Error al actualizar datos.";
+            $mensaje = "Error al actualizar datos: " . $stmt_update->error;
         }
         $stmt_update->close();
     } else {
-        $sql_insert = "INSERT INTO datos_usuarios (usuario_id, telefono_movil, telefono_casa, direccion, provincia, ciudad, pais, codigo_postal, fecha_nacimiento, genero, estado_civil, tipo_documento, numero_documento, ocupacion, empresa, nivel_educativo, biografia, foto_perfil) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        // Insertar nuevos datos (correo debe provenir de otro lado, aquí se usa correo actual de usuario para evitar edición)
+        // Para inserción, lo ideal es que el correo ya esté registrado en otro lado, o sea tomado del usuario
+        // Asumimos que existe una tabla usuarios con correo, lo consultamos:
+
+        $sql_correo = "SELECT correo FROM usuarios WHERE id = ?";
+        $stmt_correo = $conn->prepare($sql_correo);
+        $stmt_correo->bind_param("i", $usuario_id);
+        $stmt_correo->execute();
+        $stmt_correo->bind_result($correo_usuario);
+        $stmt_correo->fetch();
+        $stmt_correo->close();
+
+        $correo_a_insertar = $correo_usuario ?? '';
+
+        $sql_insert = "INSERT INTO datos_usuarios (
+            usuario_id, nombre_completo, correo, telefono_movil, telefono_casa, 
+            direccion, ciudad, provincia, pais, codigo_postal, 
+            fecha_nacimiento, genero, estado_civil, tipo_documento, 
+            numero_documento, ocupacion, empresa, nivel_educativo, 
+            biografia, foto_perfil
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        
         $stmt_insert = $conn->prepare($sql_insert);
-        $stmt_insert->bind_param("isssssssssssssssss", $usuario_id, $telefono_movil, $telefono_casa, $direccion, $provincia, $ciudad, $pais, $codigo_postal, $fecha_nacimiento, $genero, $estado_civil, $tipo_documento, $numero_documento, $ocupacion, $empresa, $nivel_educativo, $biografia, $foto_perfil);
+        $stmt_insert->bind_param("isssssssssssssssssss", 
+            $usuario_id, $datos_post['nombre_completo'], $correo_a_insertar, 
+            $datos_post['telefono_movil'], $datos_post['telefono_casa'], 
+            $datos_post['direccion'], $datos_post['ciudad'], $datos_post['provincia'], 
+            $datos_post['pais'], $datos_post['codigo_postal'], $datos_post['fecha_nacimiento'], 
+            $datos_post['genero'], $datos_post['estado_civil'], $datos_post['tipo_documento'], 
+            $datos_post['numero_documento'], $datos_post['ocupacion'], $datos_post['empresa'], 
+            $datos_post['nivel_educativo'], $datos_post['biografia'], $datos_post['foto_perfil']);
+        
         if ($stmt_insert->execute()) {
             $mensaje = "Datos guardados correctamente.";
+            $datos = $datos_post;
+            $datos['correo'] = $correo_a_insertar;
         } else {
-            $mensaje = "Error al guardar datos.";
+            $mensaje = "Error al guardar datos: " . $stmt_insert->error;
         }
         $stmt_insert->close();
     }
     $stmt->close();
 }
 
-$sql = "SELECT telefono_movil, telefono_casa, direccion, provincia, ciudad, pais, codigo_postal, fecha_nacimiento, genero, estado_civil, tipo_documento, numero_documento, ocupacion, empresa, nivel_educativo, biografia, foto_perfil FROM datos_usuarios WHERE usuario_id = ?";
+// Obtener datos actuales del usuario
+$sql = "SELECT 
+    nombre_completo, correo, telefono_movil, telefono_casa, direccion, 
+    ciudad, provincia, pais, codigo_postal, fecha_nacimiento, genero, 
+    estado_civil, tipo_documento, numero_documento, ocupacion, empresa, 
+    nivel_educativo, biografia, foto_perfil 
+    FROM datos_usuarios WHERE usuario_id = ?";
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("i", $usuario_id);
 $stmt->execute();
 $resultado = $stmt->get_result();
-$datos = $resultado->fetch_assoc();
 
+if ($resultado->num_rows > 0) {
+    $datos_db = $resultado->fetch_assoc();
+    $datos = array_merge($datos, $datos_db);
+}
+
+$stmt->close();
 $conn->close();
 ?>
 
@@ -102,233 +193,409 @@ $conn->close();
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Ajustes de Usuario</title>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Perfil Futurista</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&family=Orbitron:wght@500;700&display=swap" rel="stylesheet" />
   <style>
-  /* Reset */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+    :root {
+      --primary: #00f7ff;
+      --secondary: #7b2dff;
+      --dark: #0a0a15;
+      --darker: #050510;
+      --light: #e0e0ff;
+      --neon-glow: 0 0 10px rgba(0, 247, 255, 0.8),
+                   0 0 20px rgba(0, 247, 255, 0.6),
+                   0 0 30px rgba(0, 247, 255, 0.4);
+    }
 
-body {
-  font-family: 'Montserrat', sans-serif;
-  background-color: #121212;
-  color: #e0e0e0;
-  min-height: 100vh;
-  padding-top: 64px; /* espacio para barra superior */
-  line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-/* Barra de acceso rápido (topbar) */
-.topbar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 64px;
-  background-color: #1f2937; /* gris oscuro azulado */
-  display: flex;
-  align-items: center;
-  padding: 0 2rem;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.7);
-  z-index: 1000;
-  font-weight: 600;
-  font-size: 1rem;
-}
+    body {
+      font-family: 'Montserrat', sans-serif;
+      background-color: var(--darker);
+      color: var(--light);
+      min-height: 100vh;
+      background-image: 
+        radial-gradient(circle at 25% 25%, rgba(123, 45, 255, 0.15) 0%, transparent 50%),
+        radial-gradient(circle at 75% 75%, rgba(0, 247, 255, 0.15) 0%, transparent 50%);
+      overflow-x: hidden;
+    }
 
-.topbar a {
-  color: #9ca3af; /* gris claro */
-  text-decoration: none;
-  margin-right: 1.8rem;
-  padding: 0.4rem 0.8rem;
-  border-radius: 8px;
-  transition: background-color 0.3s ease, color 0.3s ease;
-  user-select: none;
-}
+    /* Efecto de partículas */
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: 
+        radial-gradient(circle at 20% 30%, rgba(0, 247, 255, 0.05) 0%, transparent 2%) 0 0,
+        radial-gradient(circle at 80% 70%, rgba(123, 45, 255, 0.05) 0%, transparent 2%) 0 0;
+      background-size: 200px 200px;
+      pointer-events: none;
+      z-index: -1;
+      animation: particleMove 100s infinite linear;
+    }
 
-.topbar a:hover,
-.topbar a.active {
-  background-color: #2563eb; /* azul brillante */
-  color: #fff;
-  box-shadow: 0 0 10px #2563ebaa;
-}
+    @keyframes particleMove {
+      100% {
+        background-position: 1000px 1000px, -1000px -1000px;
+      }
+    }
 
-.topbar a.logout {
-  margin-left: auto;
-  background-color: transparent;
-}
+    /* Barra superior futurista */
+    .topbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 70px;
+      background: rgba(10, 10, 25, 0.8);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      padding: 0 2rem;
+      box-shadow: 0 0 15px rgba(0, 247, 255, 0.2);
+      z-index: 1000;
+      border-bottom: 1px solid rgba(0, 247, 255, 0.1);
+    }
 
-.topbar a.logout:hover {
-  background-color: #dc2626; /* rojo */
-  color: #fff;
-  box-shadow: 0 0 10px #dc2626aa;
-}
+    .topbar a {
+      color: var(--light);
+      text-decoration: none;
+      margin-right: 1.5rem;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      font-weight: 600;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
 
-/* Contenedor principal */
-.container-ajustes {
-  max-width: 480px;
-  background-color: #1e293b; /* gris azulado oscuro */
-  margin: 2rem auto 4rem;
-  border-radius: 16px;
-  box-shadow: 0 6px 30px rgba(0, 0, 0, 0.9);
-  padding: 2.5rem 2rem 3rem;
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-}
+    .topbar a::before {
+      content: "";
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 0;
+      height: 2px;
+      background: var(--primary);
+      transition: width 0.3s ease;
+    }
 
-/* Título */
-h2 {
-  font-size: 2rem;
-  font-weight: 800;
-  text-align: center;
-  color: #60a5fa; /* azul claro */
-  user-select: none;
-}
+    .topbar a:hover {
+      color: var(--primary);
+      text-shadow: 0 0 8px var(--primary);
+    }
 
-/* Mensaje */
-p.mensaje {
-  text-align: center;
-  font-weight: 700;
-  font-size: 1.1rem;
-  color: #22c55e; /* verde */
-  user-select: none;
-}
+    .topbar a:hover::before {
+      width: 100%;
+    }
 
-/* Foto perfil */
-.foto-perfil-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.8rem;
-  user-select: none;
-}
+    .topbar a.active {
+      color: var(--primary);
+      text-shadow: 0 0 8px var(--primary);
+    }
 
-.foto-perfil-container img {
-  width: 130px;
-  height: 130px;
-  border-radius: 50%;
-  border: 4px solid #2563eb;
-  object-fit: cover;
-  box-shadow: 0 4px 15px #2563ebaa;
-  transition: box-shadow 0.3s ease;
-  cursor: default;
-}
+    .topbar a.active::before {
+      width: 100%;
+    }
 
-.foto-perfil-container img:hover {
-  box-shadow: 0 6px 25px #2563ebcc;
-}
+    .topbar a.logout {
+      margin-left: auto;
+      color: #ff4d7b;
+    }
 
-.foto-perfil-container input[type="file"] {
-  cursor: pointer;
-  color: #60a5fa;
-  font-weight: 600;
-  font-size: 0.9rem;
-  background-color: transparent;
-  border: none;
-  text-align: center;
-  transition: color 0.3s ease;
-}
+    .topbar a.logout:hover {
+      text-shadow: 0 0 8px #ff4d7b;
+    }
 
-.foto-perfil-container input[type="file"]:hover {
-  color: #93c5fd;
-}
+    .topbar a.logout::before {
+      background: #ff4d7b;
+    }
 
-/* Formulario - vertical */
-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1.3rem;
-}
+    /* Contenedor principal holográfico */
+    .container-ajustes {
+      max-width: 600px;
+      background: rgba(10, 10, 25, 0.7);
+      margin: 100px auto;
+      border-radius: 20px;
+      padding: 2.5rem;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(0, 247, 255, 0.2);
+      box-shadow: 0 0 30px rgba(0, 247, 255, 0.1),
+                  inset 0 0 20px rgba(0, 247, 255, 0.05);
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.5s ease, box-shadow 0.5s ease;
+    }
 
-/* Label */
-label {
-  font-weight: 700;
-  font-size: 0.95rem;
-  color: #cbd5e1; /* gris claro */
-  user-select: none;
-}
+    .container-ajustes::before {
+      content: "";
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: linear-gradient(
+        to bottom right,
+        transparent 45%,
+        rgba(0, 247, 255, 0.03) 50%,
+        transparent 55%
+      );
+      animation: holographicEffect 6s infinite linear;
+      pointer-events: none;
+      z-index: -1;
+    }
 
-/* Inputs y select */
-input[type="text"],
-input[type="date"],
-select,
-textarea {
-  width: 100%;
-  padding: 12px 16px;
-  font-size: 1rem;
-  border-radius: 12px;
-  border: 2px solid #334155; /* gris oscuro */
-  background-color: #0f172a; /* fondo input */
-  color: #e0e0e0;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
-  font-family: 'Montserrat', sans-serif;
-  resize: vertical;
-}
+    @keyframes holographicEffect {
+      0% {
+        transform: rotate(0deg) translate(-10%, -10%);
+      }
+      100% {
+        transform: rotate(360deg) translate(-10%, -10%);
+      }
+    }
 
-input[type="text"]:focus,
-input[type="date"]:focus,
-select:focus,
-textarea:focus {
-  outline: none;
-  border-color: #2563eb;
-  box-shadow: 0 0 12px #2563ebaa;
-}
+    .container-ajustes:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 0 40px rgba(0, 247, 255, 0.2),
+                  inset 0 0 20px rgba(0, 247, 255, 0.1);
+    }
 
-/* Textarea */
-textarea {
-  min-height: 110px;
-  font-family: 'Montserrat', sans-serif;
-  line-height: 1.4;
-  color: #e0e0e0;
-}
+    /* Título con efecto neón */
+    h2 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 2.5rem;
+      text-align: center;
+      margin-bottom: 1.5rem;
+      color: var(--primary);
+      text-shadow: var(--neon-glow);
+      letter-spacing: 2px;
+      position: relative;
+      animation: neonPulse 2s infinite alternate;
+    }
 
-/* Botón */
-button {
-  margin-top: 1rem;
-  padding: 14px 0;
-  font-size: 1.25rem;
-  font-weight: 800;
-  border-radius: 14px;
-  border: none;
-  cursor: pointer;
-  background: linear-gradient(90deg, #2563eb, #60a5fa);
-  color: white;
-  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.6);
-  transition: background-color 0.3s ease, box-shadow 0.3s ease, transform 0.15s ease;
-  user-select: none;
-}
+    @keyframes neonPulse {
+      from {
+        text-shadow: var(--neon-glow);
+      }
+      to {
+        text-shadow: 0 0 15px rgba(0, 247, 255, 0.9),
+                    0 0 30px rgba(0, 247, 255, 0.7),
+                    0 0 45px rgba(0, 247, 255, 0.5);
+      }
+    }
 
-button:hover {
-  background: linear-gradient(90deg, #1d4ed8, #3b82f6);
-  box-shadow: 0 8px 28px rgba(29, 78, 216, 0.8);
-  transform: translateY(-2px);
-}
+    /* Mensaje flotante */
+    .mensaje {
+      background: rgba(0, 247, 255, 0.1);
+      color: var(--primary);
+      padding: 1rem;
+      border-radius: 10px;
+      text-align: center;
+      margin-bottom: 1.5rem;
+      border: 1px solid rgba(0, 247, 255, 0.3);
+      animation: floatUp 0.5s ease-out;
+      box-shadow: 0 0 15px rgba(0, 247, 255, 0.2);
+    }
 
-button:active {
-  transform: translateY(0);
-  box-shadow: 0 6px 18px rgba(29, 78, 216, 0.6);
-}
+    @keyframes floatUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
 
-/* Responsive: pantalla pequeña */
-@media (max-width: 520px) {
-  .container-ajustes {
-    margin: 1rem;
-    padding: 2rem 1.5rem 2.5rem;
-    width: auto;
-  }
-  
-  h2 {
-    font-size: 1.75rem;
-  }
-}
+    /* Foto de perfil con efecto 3D */
+    .foto-perfil-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 2rem;
+      perspective: 1000px;
+    }
 
+    .foto-perfil-container img {
+      width: 150px;
+      height: 150px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid var(--primary);
+      box-shadow: var(--neon-glow);
+      transition: all 0.5s ease;
+      transform-style: preserve-3d;
+    }
+
+    .foto-perfil-container:hover img {
+      transform: rotateY(20deg) scale(1.05);
+      box-shadow: 0 0 25px var(--primary),
+                 0 0 50px rgba(0, 247, 255, 0.5);
+    }
+
+    .foto-perfil-container input[type="file"] {
+      margin-top: 1rem;
+      background: rgba(0, 247, 255, 0.1);
+      color: var(--primary);
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      border: 1px dashed var(--primary);
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-align: center;
+      font-weight: 600;
+    }
+
+    .foto-perfil-container input[type="file"]:hover {
+      background: rgba(0, 247, 255, 0.2);
+      box-shadow: 0 0 15px rgba(0, 247, 255, 0.3);
+    }
+
+    /* Formulario futurista */
+    form {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    .full-width {
+      grid-column: span 2;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+      color: var(--light);
+      text-shadow: 0 0 5px rgba(0, 247, 255, 0.3);
+      font-size: 0.9rem;
+    }
+
+    input[type="text"],
+    input[type="date"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 12px 15px;
+      background: rgba(10, 10, 30, 0.7);
+      border: 1px solid rgba(0, 247, 255, 0.3);
+      border-radius: 8px;
+      color: var(--light);
+      font-family: 'Montserrat', sans-serif;
+      transition: all 0.3s ease;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    }
+
+    input[type="text"]:focus,
+    input[type="date"]:focus,
+    select:focus,
+    textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 15px rgba(0, 247, 255, 0.4);
+      background: rgba(10, 10, 40, 0.9);
+    }
+
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+
+    /* Botón con efecto de energía */
+    button {
+      grid-column: span 2;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: var(--dark);
+      border: none;
+      padding: 15px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+      z-index: 1;
+      font-family: 'Orbitron', sans-serif;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      box-shadow: 0 0 15px rgba(0, 247, 255, 0.5);
+    }
+
+    button::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      transition: 0.5s;
+      z-index: -1;
+    }
+
+    button:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 0 25px rgba(0, 247, 255, 0.8);
+    }
+
+    button:hover::before {
+      left: 100%;
+    }
+
+    /* Efecto para selects */
+    select {
+      appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2300f7ff'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      background-size: 15px;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      form {
+        grid-template-columns: 1fr;
+      }
+      
+      .full-width {
+        grid-column: span 1;
+      }
+      
+      .container-ajustes {
+        margin: 100px 20px;
+        padding: 1.5rem;
+      }
+      
+      h2 {
+        font-size: 2rem;
+      }
+    }
+
+    /* Efecto de carga para inputs */
+    @keyframes inputGlow {
+      0%, 100% {
+        border-color: rgba(0, 247, 255, 0.3);
+      }
+      50% {
+        border-color: var(--primary);
+      }
+    }
+
+    input:focus, select:focus, textarea:focus {
+      animation: inputGlow 2s infinite;
+    }
   </style>
 </head>
 <body>
@@ -338,9 +605,9 @@ button:active {
   <a href="logout.php" class="logout">Cerrar sesión</a>
 </div>
 
-
-  <main class="container-ajustes">
-
+<main class="container-ajustes">
+    <h2>MI PERFIL FUTURISTA</h2>
+    
     <div class="foto-perfil-container" aria-label="Foto de perfil">
       <?php if (!empty($datos['foto_perfil'])): ?>
         <img src="<?= htmlspecialchars($datos['foto_perfil']) ?>" alt="Foto de perfil" loading="lazy" />
@@ -351,88 +618,126 @@ button:active {
     </div>
 
     <form id="form-ajustes" method="post" enctype="multipart/form-data" novalidate aria-label="Formulario de ajustes de usuario">
-
       <?php if ($mensaje): ?>
         <p class="mensaje"><?= htmlspecialchars($mensaje) ?></p>
       <?php endif; ?>
 
-      <label for="telefono_movil">Teléfono Móvil:</label>
-      <input type="text" id="telefono_movil" name="telefono_movil" value="<?= htmlspecialchars($datos['telefono_movil'] ?? '') ?>">
+      <!-- Mostrar el correo como texto estático, no editable -->
+      <div class="full-width">
+        <label>Correo Electrónico:</label>
+        <p style="padding: 12px 15px; background: rgba(10,10,30,0.7); border-radius: 8px; color: var(--light); user-select: text;">
+          <?= htmlspecialchars($datos['correo']) ?: 'No registrado' ?>
+        </p>
+      </div>
 
-      <label for="telefono_casa">Teléfono de Casa:</label>
-      <input type="text" id="telefono_casa" name="telefono_casa" value="<?= htmlspecialchars($datos['telefono_casa'] ?? '') ?>">
+      <div>
+        <label for="telefono_movil">Teléfono Móvil:</label>
+        <input type="text" id="telefono_movil" name="telefono_movil" value="<?= htmlspecialchars($datos['telefono_movil']) ?>">
+      </div>
 
-      <label for="direccion">Dirección:</label>
-      <input type="text" id="direccion" name="direccion" value="<?= htmlspecialchars($datos['direccion'] ?? '') ?>">
+      <div>
+        <label for="telefono_casa">Teléfono de Casa:</label>
+        <input type="text" id="telefono_casa" name="telefono_casa" value="<?= htmlspecialchars($datos['telefono_casa']) ?>">
+      </div>
 
-      <label for="provincia">Provincia:</label>
-      <input type="text" id="provincia" name="provincia" value="<?= htmlspecialchars($datos['provincia'] ?? '') ?>">
+      <div class="full-width">
+        <label for="direccion">Dirección:</label>
+        <input type="text" id="direccion" name="direccion" value="<?= htmlspecialchars($datos['direccion']) ?>">
+      </div>
 
-      <label for="ciudad">Ciudad:</label>
-      <input type="text" id="ciudad" name="ciudad" value="<?= htmlspecialchars($datos['ciudad'] ?? '') ?>">
+      <div>
+        <label for="provincia">Provincia:</label>
+        <input type="text" id="provincia" name="provincia" value="<?= htmlspecialchars($datos['provincia']) ?>">
+      </div>
 
-      <label for="pais">País:</label>
-      <input type="text" id="pais" name="pais" value="<?= htmlspecialchars($datos['pais'] ?? '') ?>">
+      <div>
+        <label for="ciudad">Ciudad:</label>
+        <input type="text" id="ciudad" name="ciudad" value="<?= htmlspecialchars($datos['ciudad']) ?>">
+      </div>
 
-      <label for="codigo_postal">Código Postal:</label>
-      <input type="text" id="codigo_postal" name="codigo_postal" value="<?= htmlspecialchars($datos['codigo_postal'] ?? '') ?>">
+      <div>
+        <label for="pais">País:</label>
+        <input type="text" id="pais" name="pais" value="<?= htmlspecialchars($datos['pais']) ?>">
+      </div>
 
-      <label for="fecha_nacimiento">Fecha de Nacimiento:</label>
-      <input type="date" id="fecha_nacimiento" name="fecha_nacimiento" value="<?= htmlspecialchars($datos['fecha_nacimiento'] ?? '') ?>">
+      <div>
+        <label for="codigo_postal">Código Postal:</label>
+        <input type="text" id="codigo_postal" name="codigo_postal" value="<?= htmlspecialchars($datos['codigo_postal']) ?>">
+      </div>
 
-      <label for="genero">Género:</label>
-      <select id="genero" name="genero">
-        <option value="">Seleccione</option>
-        <option value="Masculino" <?= ($datos['genero'] ?? '') === 'Masculino' ? 'selected' : '' ?>>Masculino</option>
-        <option value="Femenino" <?= ($datos['genero'] ?? '') === 'Femenino' ? 'selected' : '' ?>>Femenino</option>
-        <option value="Otro" <?= ($datos['genero'] ?? '') === 'Otro' ? 'selected' : '' ?>>Otro</option>
-      </select>
+      <div>
+        <label for="fecha_nacimiento">Fecha de Nacimiento:</label>
+        <input type="date" id="fecha_nacimiento" name="fecha_nacimiento" value="<?= htmlspecialchars($datos['fecha_nacimiento']) ?>">
+      </div>
 
-      <label for="estado_civil">Estado Civil:</label>
-      <select id="estado_civil" name="estado_civil">
-        <option value="">Seleccione</option>
-        <option value="Soltero" <?= ($datos['estado_civil'] ?? '') === 'Soltero' ? 'selected' : '' ?>>Soltero</option>
-        <option value="Casado" <?= ($datos['estado_civil'] ?? '') === 'Casado' ? 'selected' : '' ?>>Casado</option>
-        <option value="Divorciado" <?= ($datos['estado_civil'] ?? '') === 'Divorciado' ? 'selected' : '' ?>>Divorciado</option>
-        <option value="Viudo" <?= ($datos['estado_civil'] ?? '') === 'Viudo' ? 'selected' : '' ?>>Viudo</option>
-        <option value="Otro" <?= ($datos['estado_civil'] ?? '') === 'Otro' ? 'selected' : '' ?>>Otro</option>
-      </select>
+      <div>
+        <label for="genero">Género:</label>
+        <select id="genero" name="genero">
+          <option value="">Seleccione</option>
+          <option value="Masculino" <?= $datos['genero'] === 'Masculino' ? 'selected' : '' ?>>Masculino</option>
+          <option value="Femenino" <?= $datos['genero'] === 'Femenino' ? 'selected' : '' ?>>Femenino</option>
+          <option value="Otro" <?= $datos['genero'] === 'Otro' ? 'selected' : '' ?>>Otro</option>
+        </select>
+      </div>
 
-      <label for="tipo_documento">Tipo de Documento:</label>
-      <select id="tipo_documento" name="tipo_documento">
-        <option value="">Seleccione</option>
-        <option value="Cédula" <?= ($datos['tipo_documento'] ?? '') === 'Cédula' ? 'selected' : '' ?>>Cédula</option>
-        <option value="Pasaporte" <?= ($datos['tipo_documento'] ?? '') === 'Pasaporte' ? 'selected' : '' ?>>Pasaporte</option>
-        <option value="Licencia" <?= ($datos['tipo_documento'] ?? '') === 'Licencia' ? 'selected' : '' ?>>Licencia</option>
-        <option value="Otro" <?= ($datos['tipo_documento'] ?? '') === 'Otro' ? 'selected' : '' ?>>Otro</option>
-      </select>
+      <div>
+        <label for="estado_civil">Estado Civil:</label>
+        <select id="estado_civil" name="estado_civil">
+          <option value="">Seleccione</option>
+          <option value="Soltero" <?= $datos['estado_civil'] === 'Soltero' ? 'selected' : '' ?>>Soltero</option>
+          <option value="Casado" <?= $datos['estado_civil'] === 'Casado' ? 'selected' : '' ?>>Casado</option>
+          <option value="Divorciado" <?= $datos['estado_civil'] === 'Divorciado' ? 'selected' : '' ?>>Divorciado</option>
+          <option value="Viudo" <?= $datos['estado_civil'] === 'Viudo' ? 'selected' : '' ?>>Viudo</option>
+          <option value="Otro" <?= $datos['estado_civil'] === 'Otro' ? 'selected' : '' ?>>Otro</option>
+        </select>
+      </div>
 
-      <label for="numero_documento">Número de Documento:</label>
-      <input type="text" id="numero_documento" name="numero_documento" value="<?= htmlspecialchars($datos['numero_documento'] ?? '') ?>">
+      <div>
+        <label for="tipo_documento">Tipo de Documento:</label>
+        <select id="tipo_documento" name="tipo_documento">
+          <option value="">Seleccione</option>
+          <option value="Cédula" <?= $datos['tipo_documento'] === 'Cédula' ? 'selected' : '' ?>>Cédula</option>
+          <option value="Pasaporte" <?= $datos['tipo_documento'] === 'Pasaporte' ? 'selected' : '' ?>>Pasaporte</option>
+          <option value="Licencia" <?= $datos['tipo_documento'] === 'Licencia' ? 'selected' : '' ?>>Licencia</option>
+          <option value="Otro" <?= $datos['tipo_documento'] === 'Otro' ? 'selected' : '' ?>>Otro</option>
+        </select>
+      </div>
 
-      <label for="ocupacion">Ocupación:</label>
-      <input type="text" id="ocupacion" name="ocupacion" value="<?= htmlspecialchars($datos['ocupacion'] ?? '') ?>">
+      <div>
+        <label for="numero_documento">Número de Documento:</label>
+        <input type="text" id="numero_documento" name="numero_documento" value="<?= htmlspecialchars($datos['numero_documento']) ?>">
+      </div>
 
-      <label for="empresa">Empresa:</label>
-      <input type="text" id="empresa" name="empresa" value="<?= htmlspecialchars($datos['empresa'] ?? '') ?>">
+      <div>
+        <label for="ocupacion">Ocupación:</label>
+        <input type="text" id="ocupacion" name="ocupacion" value="<?= htmlspecialchars($datos['ocupacion']) ?>">
+      </div>
 
-      <label for="nivel_educativo">Nivel Educativo:</label>
-      <select id="nivel_educativo" name="nivel_educativo">
-        <option value="">Seleccione</option>
-        <option value="Primaria" <?= ($datos['nivel_educativo'] ?? '') === 'Primaria' ? 'selected' : '' ?>>Primaria</option>
-        <option value="Secundaria" <?= ($datos['nivel_educativo'] ?? '') === 'Secundaria' ? 'selected' : '' ?>>Secundaria</option>
-        <option value="Técnico" <?= ($datos['nivel_educativo'] ?? '') === 'Técnico' ? 'selected' : '' ?>>Técnico</option>
-        <option value="Universitario" <?= ($datos['nivel_educativo'] ?? '') === 'Universitario' ? 'selected' : '' ?>>Universitario</option>
-        <option value="Postgrado" <?= ($datos['nivel_educativo'] ?? '') === 'Postgrado' ? 'selected' : '' ?>>Postgrado</option>
-      </select>
+      <div>
+        <label for="empresa">Empresa:</label>
+        <input type="text" id="empresa" name="empresa" value="<?= htmlspecialchars($datos['empresa']) ?>">
+      </div>
 
-      <label for="biografia" class="full-width">Biografía:</label>
-      <textarea id="biografia" name="biografia" class="full-width"><?= htmlspecialchars($datos['biografia'] ?? '') ?></textarea>
+      <div>
+        <label for="nivel_educativo">Nivel Educativo:</label>
+        <select id="nivel_educativo" name="nivel_educativo">
+          <option value="">Seleccione</option>
+          <option value="Primaria" <?= $datos['nivel_educativo'] === 'Primaria' ? 'selected' : '' ?>>Primaria</option>
+          <option value="Secundaria" <?= $datos['nivel_educativo'] === 'Secundaria' ? 'selected' : '' ?>>Secundaria</option>
+          <option value="Técnico" <?= $datos['nivel_educativo'] === 'Técnico' ? 'selected' : '' ?>>Técnico</option>
+          <option value="Universitario" <?= $datos['nivel_educativo'] === 'Universitario' ? 'selected' : '' ?>>Universitario</option>
+          <option value="Postgrado" <?= $datos['nivel_educativo'] === 'Postgrado' ? 'selected' : '' ?>>Postgrado</option>
+        </select>
+      </div>
 
-      <button type="submit">Guardar Cambios</button>
+      <div class="full-width">
+        <label for="biografia">Biografía:</label>
+        <textarea id="biografia" name="biografia"><?= htmlspecialchars($datos['biografia']) ?></textarea>
+      </div>
+
+      <button type="submit">GUARDAR CAMBIOS</button>
     </form>
-
-  </main>
+</main>
 
 </body>
 </html>

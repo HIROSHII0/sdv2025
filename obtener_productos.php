@@ -35,18 +35,15 @@ if (!$result) {
     exit;
 }
 
-$productos = [];
+$productos[] = [
+    "id" => $fila['id'],
+    "titulo" => $fila['titulo'],
+    "descripcion" => $fila['descripcion'],
+    "precio" => $fila['precio'],
+    "imagen" => 'uploads/' . $fila['imagen'], // Ruta relativa completa
+    "usuario_nombre" => $fila['usuario_nombre'] ?? "Anónimo"
+];
 
-while ($fila = $result->fetch_assoc()) {
-    $productos[] = [
-        "id" => $fila['id'],
-        "titulo" => $fila['titulo'],
-        "descripcion" => $fila['descripcion'],
-        "precio" => $fila['precio'],
-        "imagen" => $fila['imagen'], // Asegúrate que aquí guardas la URL o ruta accesible de la imagen
-        "usuario_nombre" => $fila['usuario_nombre'] ?? "Anónimo"
-    ];
-}
 
 echo json_encode([
     "success" => true,

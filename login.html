@@ -4,125 +4,229 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Login EscolarMania</title>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&display=swap" rel="stylesheet" />
   <style>
-    /* Reset básico */
+    :root {
+      --color-primario: #743ad5;
+      --color-secundario: #d53a9d;
+      --color-acento: #ff6ec4;
+      --color-contraste: #ffffff;
+      --sombra-suave: 0 8px 24px rgba(0, 0, 0, 0.2);
+      --color-texto: #222;
+    }
+
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
     }
 
-    body, html {
-      height: 100%;
+    body {
       font-family: 'Orbitron', sans-serif;
-      background: #f5f7fa;
-      color: #333;
+      overflow: hidden;
+      position: relative;
+      min-height: 100vh;
       display: flex;
-      flex-direction: column;
+      align-items: center;
+      justify-content: center;
     }
 
-    /* Fondo sutil */
-    .fondo {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%);
-      opacity: 0.1;
+    /* Fondo con imágenes */
+    .fondo-imagenes {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
       z-index: -1;
     }
 
-    /* Estilos para el login */
+    .fondo-imagenes img {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0;
+      transition: opacity 2s ease-in-out;
+      filter: brightness(0.4) blur(3px);
+    }
+
+    .fondo-imagenes img.activa {
+      opacity: 1;
+    }
+
     .borde-arcoiris {
+      background: var(--color-contraste);
       border: 4px solid;
       border-image-slice: 1;
-      border-width: 4px;
-      border-image-source: linear-gradient(to left, #743ad5, #d53a9d);
-      padding: 2rem;
-      border-radius: 16px;
+      border-image-source: linear-gradient(to right, var(--color-primario), var(--color-secundario));
+      padding: 2rem 2.5rem;
+      border-radius: 20px;
+      box-shadow: 0 0 20px var(--color-secundario);
       max-width: 400px;
-      margin: auto;
-      margin-top: 60px;
-      background: white;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+      width: 90%;
+      animation: flotar 3s infinite ease-in-out;
+      z-index: 1;
+    }
+
+    @keyframes flotar {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
     }
 
     .contenedor-login {
       display: flex;
       flex-direction: column;
-      gap: 1.2rem;
+      gap: 1.5rem;
       align-items: center;
+      text-align: center;
     }
 
     .contenedor-login h2 {
-      font-size: 2rem;
-      color: #333;
+      font-size: 2.2rem;
+      color: var(--color-primario);
+      text-shadow: 1px 1px 8px var(--color-secundario);
     }
 
     input[type="text"],
     input[type="password"] {
       width: 100%;
-      padding: 10px;
+      padding: 12px;
       font-size: 1rem;
       border: 2px solid #ccc;
-      border-radius: 8px;
-      transition: border-color 0.3s;
+      border-radius: 10px;
+      transition: 0.3s;
+      box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.1);
     }
 
-    input[type="text"]:focus,
-    input[type="password"]:focus {
-      border-color: #0077ff;
+    input:focus {
+      border-color: var(--color-acento);
+      box-shadow: 0 0 10px var(--color-acento);
       outline: none;
     }
 
     button[type="submit"] {
       width: 100%;
-      padding: 10px;
+      padding: 12px;
       font-size: 1rem;
-      font-weight: 600;
-      background-color: #0077ff;
+      font-weight: bold;
+      background: linear-gradient(to right, var(--color-primario), var(--color-secundario));
       color: white;
       border: none;
-      border-radius: 8px;
+      border-radius: 10px;
       cursor: pointer;
-      transition: background-color 0.3s;
+      transition: transform 0.3s, box-shadow 0.3s;
     }
 
     button[type="submit"]:hover {
-      background-color: #005fcc;
+      transform: scale(1.05);
+      box-shadow: 0 0 20px var(--color-acento);
     }
 
     .registro-link {
+      margin-top: 1rem;
       font-size: 0.9rem;
+      color: var(--color-texto);
     }
 
     .registro-link a {
-      color: #5a9eeb;
+      color: var(--color-secundario);
       text-decoration: none;
       font-weight: bold;
+      position: relative;
     }
 
-    .registro-link a:hover {
-      text-decoration: underline;
+    .registro-link a::after {
+      content: '';
+      position: absolute;
+      width: 0%;
+      height: 2px;
+      background: var(--color-secundario);
+      left: 0;
+      bottom: -3px;
+      transition: 0.3s;
+    }
+
+    .registro-link a:hover::after {
+      width: 100%;
     }
   </style>
 </head>
 <body>
-  <div class="fondo"></div>
+
+  <!-- Fondo animado con imágenes -->
+  <div class="fondo-imagenes">
+    <img src="imagenes/animales1.webp" class="activa" alt="Productos">
+    <img src="imagenes/animales2.png" alt="Servicios">
+    <img src="imagenes/mascota-correcta.jpg" alt="Mascotas">
+    <img src="imagenes/servicios2.jpg" alt="Mascotas">
+    <img src="imagenes/servicios1.jpg" alt="Mascotas">
+    <img src="imagenes/mascota-correcta.jpg" alt="Mascotas">
+    <img src="imagenes/mascota-correcta.jpg" alt="Mascotas">
+  </div>
 
   <div class="borde-arcoiris">
     <div class="contenedor-login">
       <h2>Bienvenido</h2>
-      <!-- Conexión al archivo login.php -->
+
+      <div id="mensaje-error" style="color: red; font-weight: bold; margin-bottom: 1rem; display: none;"></div>
+
       <form action="login.php" method="POST">
         <input type="text" name="nombre_usuario" placeholder="Nombre de usuario" required />
         <input type="password" name="contrasena" placeholder="Contraseña" required />
         <button type="submit">Iniciar Sesión</button>
       </form>
+
       <div class="registro-link">
         ¿No tienes cuenta? <a href="registro.html">Regístrate aquí</a>
       </div>
     </div>
   </div>
+
+  <script>
+    // Cambio automático de imágenes de fondo
+    const imagenes = document.querySelectorAll(".fondo-imagenes img");
+    let index = 0;
+
+    setInterval(() => {
+      imagenes[index].classList.remove("activa");
+      index = (index + 1) % imagenes.length;
+      imagenes[index].classList.add("activa");
+    }, 5000); // cada 5 segundos
+  </script>
+
+  <script>
+    // Detecta parámetro 'error' en la URL y muestra mensaje
+    function getQueryParam(param) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get(param);
+    }
+
+    const mensajeError = document.getElementById('mensaje-error');
+    const error = getQueryParam('error');
+
+    if (error) {
+      let texto = '';
+      switch (error) {
+        case 'noexiste':
+          texto = 'El usuario no existe. Por favor, verifica tus datos.';
+          break;
+        case 'contraseña':
+          texto = 'usuario o contraseña incorrecta. Intenta nuevamente.';
+          break;
+        case 'camposvacios':
+          texto = 'Por favor, completa todos los campos.';
+          break;
+        case 'errorconsulta':
+          texto = 'Error en la consulta a la base de datos. Intenta más tarde.';
+          break;
+        default:
+          texto = 'Error desconocido.';
+      }
+      mensajeError.textContent = texto;
+      mensajeError.style.display = 'block';
+    }
+  </script>
+  
 </body>
 </html>

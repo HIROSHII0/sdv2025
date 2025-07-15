@@ -2,62 +2,88 @@
 session_start();
 require_once 'conexion.php';
 
+// Validar sesión
 if (!isset($_SESSION['usuario_id'])) {
     http_response_code(401);
-    echo json_encode(["error" => "No autorizado"]);
+    echo json_encode(["error" => "No autorizado. Por favor inicia sesión."]);
     exit;
 }
 
+// Parámetros
 $search = isset($_GET['search']) ? "%{$_GET['search']}%" : '%';
-$sort = isset($_GET['sort']) ? $_GET['sort'] : '';
+$sort = $_GET['sort'] ?? '';
 $price_min = isset($_GET['price_min']) ? floatval($_GET['price_min']) : 0;
 $price_max = isset($_GET['price_max']) ? floatval($_GET['price_max']) : 1000000;
 $page = isset($_GET['page']) ? intval($_GET['page']) : 1;
 $items_per_page = 6;
 $offset = ($page - 1) * $items_per_page;
 
-// Query: filtrar por tipo servicio, buscar en titulo y descripcion, y rango precio_producto (según tu estructura)
-$sql = "SELECT SQL_CALC_FOUND_ROWS id, titulo, descripcion, imagen, precio_producto AS precio
-        FROM publicaciones
-        WHERE tipo = 'servicio' 
-          AND (titulo LIKE ? OR descripcion LIKE ?)
-          AND precio_producto BETWEEN ? AND ?
-        ";
+// Consulta SQL
+$sql = "SELECT SQL_CALC_FOUND_ROWS 
+    p.id, 
+    p.titulo, 
+    p.descripcion, 
+    p.imagen, 
+    p.precio_producto AS precio,
+    p.duracion, -- <-- añade esto
+    p.lugar,    -- <-- si también quieres mostrar lugar
+    u.nombre_usuario
+FROM publicaciones p
+INNER JOIN usuarios u ON p.usuario_id = u.id
+...
 
-$order_sql = "";
+        WHERE p.tipo = 'servicio' 
+          AND (p.titulo LIKE ? OR p.descripcion LIKE ?)
+          AND p.precio_producto BETWEEN ? AND ?";
+
+// Ordenamiento
 switch ($sort) {
-    case "name-asc": $order_sql = "ORDER BY titulo ASC"; break;
-    case "name-desc": $order_sql = "ORDER BY titulo DESC"; break;
-    case "price-asc": $order_sql = "ORDER BY precio_producto ASC"; break;
-    case "price-desc": $order_sql = "ORDER BY precio_producto DESC"; break;
-    default: $order_sql = "ORDER BY fecha_publicacion DESC"; break;
+    case "name-asc":  $sql .= " ORDER BY p.titulo ASC"; break;
+    case "name-desc": $sql .= " ORDER BY p.titulo DESC"; break;
+    case "price-asc": $sql .= " ORDER BY p.precio_producto ASC"; break;
+    case "price-desc":$sql .= " ORDER BY p.precio_producto DESC"; break;
+    default:          $sql .= " ORDER BY p.fecha_publicacion DESC"; break;
 }
 
-$sql .= " $order_sql LIMIT ?, ?";
+$sql .= " LIMIT ?, ?";
 
+// Preparar y ejecutar
 $stmt = $conn->prepare($sql);
+if (!$stmt) {
+    http_response_code(500);
+    echo json_encode(["error" => "Error al preparar la consulta: " . $conn->error]);
+    exit;
+}
+
 $stmt->bind_param("ssddii", $search, $search, $price_min, $price_max, $offset, $items_per_page);
 $stmt->execute();
 $result = $stmt->get_result();
 
+// Procesar resultados
 $servicios = [];
 while ($row = $result->fetch_assoc()) {
-    // Si no tiene imagen, poner una por defecto
-    if (empty($row['imagen'])) {
-        $row['imagen'] = 'assets/img/default-service.jpg'; // Ajusta ruta a imagen por defecto
-    }
+    $ruta = 'uploads/' . basename($row['imagen']);
+    $row['imagen'] = (!empty($row['imagen']) && file_exists($ruta)) ? $ruta : "https://via.placeholder.com/300x200?text=Sin+imagen";
+    $row['precio'] = is_numeric($row['precio']) ? (float)$row['precio'] : 0.00;
     $servicios[] = $row;
 }
 
+// Total
 $total_result = $conn->query("SELECT FOUND_ROWS() AS total");
-$total = $total_result->fetch_assoc()['total'];
+$total = $total_result ? $total_result->fetch_assoc()['total'] : 0;
 
+// Cierre
 $stmt->close();
+$conn->close();
 
-header('Content-Type: application/json');
+// Respuesta
+header('Content-Type: application/json; charset=utf-8');
 echo json_encode([
+    "success" => true,
     "servicios" => $servicios,
     "total" => intval($total),
     "page" => $page,
-    "items_per_page" => $items_per_page
-]);
+    "items_per_page" => $items_per_page,
+    "total_pages" => ceil($total / $items_per_page)
+], JSON_UNESCAPED_SLASHES | JSON_NUMERIC_CHECK);
+?>

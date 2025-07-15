@@ -1,59 +1,33 @@
 <?php
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
 session_start();
-include 'conexion.php';
+require_once 'conexion.php';
 
 header('Content-Type: application/json');
 
-// Verificar si el usuario está logueado
 if (!isset($_SESSION['usuario_id'])) {
-    echo json_encode([
-        "success" => false,
-        "message" => "Usuario no autenticado"
-    ]);
+    echo json_encode(['success' => false, 'error' => 'Usuario no autenticado']);
     exit;
 }
 
-$usuario_id = $_SESSION['usuario_id'];
-
-// Preparar consulta (selecciona solo campos que usarás)
-$sql = "SELECT id, tipo, titulo, descripcion, precio, imagen, fecha_publicacion FROM publicaciones WHERE usuario_id = ?";
-$stmt = $conn->prepare($sql);
-
-if (!$stmt) {
-    echo json_encode([
-        "success" => false,
-        "message" => "Error en la preparación de la consulta: " . $conn->error
-    ]);
+$query = $conn->prepare("SELECT id, tipo, titulo, descripcion, detalles, imagen, edad, raza, tamano, vacunado, desparasitado, lugar, precio, telefono, fecha_publicacion FROM publicaciones WHERE usuario_id = ?");
+if (!$query) {
+    echo json_encode(['success' => false, 'error' => 'Error en la consulta SQL: ' . $conn->error]);
     exit;
 }
 
-$stmt->bind_param("i", $usuario_id);
-
-if (!$stmt->execute()) {
-    echo json_encode([
-        "success" => false,
-        "message" => "Error al ejecutar la consulta: " . $stmt->error
-    ]);
-    exit;
-}
-
-$resultado = $stmt->get_result();
+$query->bind_param("i", $_SESSION['usuario_id']);
+$query->execute();
+$result = $query->get_result();
 
 $publicaciones = [];
-
-while ($fila = $resultado->fetch_assoc()) {
-    $publicaciones[] = $fila;
+while ($row = $result->fetch_assoc()) {
+    // Si quieres modificar la ruta de la imagen para que venga desde "uploads/", puedes hacerlo aquí:
+    $row['imagen'] = 'uploads/' . $row['imagen'];
+    $publicaciones[] = $row;
 }
 
-$stmt->close();
-$conn->close();
+echo json_encode(['success' => true, 'publicaciones' => $publicaciones]);
 
-echo json_encode([
-    "success" => true,
-    "publicaciones" => $publicaciones
-]);
+$query->close();
+$conn->close();
 ?>

@@ -1,101 +1,155 @@
 <?php
 session_start();
-header('Content-Type: application/json');
-include 'conexion.php'; // Debe definir $conn como conexión MySQLi
+require_once 'conexion.php';
 
-// Verificar sesión
 if (!isset($_SESSION['usuario_id'])) {
-    http_response_code(401);
-    echo json_encode(["success" => false, "message" => "No autenticado"]);
-    exit;
+    die(json_encode(['success' => false, 'message' => 'No autorizado']));
 }
 
-$usuario_id = $_SESSION['usuario_id'];
-$tipo = $_POST['tipo'] ?? '';
-$titulo = $_POST['titulo'] ?? '';
-$descripcion = $_POST['descripcion'] ?? '';
-$precio = $_POST['precio'] ?? null;
+$response = ['success' => false, 'message' => ''];
 
-// Validar campos requeridos
-if (empty($tipo) || empty($titulo) || empty($descripcion)) {
-    http_response_code(400);
-    echo json_encode(["success" => false, "message" => "Campos requeridos faltantes"]);
-    exit;
-}
-
-// Normalizar precio
-if ($precio === '' || $precio === null) {
-    $precio = null;
-} else {
-    $precio = floatval($precio);
-}
-
-// Manejar subida de imagen con validación de tipo y tamaño
-$nombreImagen = null;
-if (isset($_FILES['imagen']) && $_FILES['imagen']['error'] === UPLOAD_ERR_OK) {
-    $permitidos = ['image/jpeg', 'image/png', 'image/gif'];
-    $tipoArchivo = $_FILES['imagen']['type'];
-    $tamanoMax = 5 * 1024 * 1024; // 5MB máximo
-
-    if (!in_array($tipoArchivo, $permitidos)) {
-        http_response_code(415);
-        echo json_encode(["success" => false, "message" => "Tipo de imagen no permitido. Solo JPG, PNG, GIF."]);
-        exit;
+try {
+    // ────────────────────────────
+    // 1. Validación básica de campos requeridos
+    // ────────────────────────────
+    $requiredFields = ['tipo', 'titulo', 'descripcion'];
+    foreach ($requiredFields as $field) {
+        if (empty($_POST[$field])) {
+            die(json_encode([
+                'success' => false,
+                'message' => "El campo $field es requerido"
+            ]));
+        }
     }
 
-    if ($_FILES['imagen']['size'] > $tamanoMax) {
-        http_response_code(413);
-        echo json_encode(["success" => false, "message" => "La imagen es demasiado grande. Máximo 5MB."]);
-        exit;
+    $usuario_id  = $_SESSION['usuario_id'];
+    $tipo        = $_POST['tipo'];
+    $titulo      = $_POST['titulo'];
+    $descripcion = $_POST['descripcion'];
+
+    // ────────────────────────────
+    // 2. Validación específica para servicios
+    // ────────────────────────────
+    if ($tipo === 'servicio') {
+        if (empty($_POST['duracion']) || empty($_POST['lugar'])) {
+            die(json_encode([
+                'success' => false,
+                'message' => 'Para servicios, la duración y el lugar son obligatorios'
+            ]));
+        }
     }
 
-    $directorio = 'uploads/';
-    if (!file_exists($directorio)) {
-        mkdir($directorio, 0755, true);
+    // ────────────────────────────
+    // 3. Gestión de la imagen
+    // ────────────────────────────
+    $imagen = 'logo.jpg'; // Imagen por defecto
+
+    if (isset($_FILES['imagen']) && $_FILES['imagen']['error'] === UPLOAD_ERR_OK) {
+        $directorio = 'uploads/';
+        if (!is_dir($directorio)) {
+            mkdir($directorio, 0755, true);
+        }
+
+        $ext = strtolower(pathinfo($_FILES['imagen']['name'], PATHINFO_EXTENSION));
+        $ext_permitidas = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+
+        if (in_array($ext, $ext_permitidas)) {
+            // Validar tamaño máximo (5MB)
+            if ($_FILES['imagen']['size'] <= 5 * 1024 * 1024) {
+                $nombreArchivo = 'pub_' . $usuario_id . '_' . time() . '.' . $ext;
+                $ruta = $directorio . $nombreArchivo;
+
+                if (move_uploaded_file($_FILES['imagen']['tmp_name'], $ruta)) {
+                    $imagen = $nombreArchivo;
+                }
+            } else {
+                $response['message'] = 'La imagen es demasiado grande (máximo 5MB)';
+                echo json_encode($response);
+                exit;
+            }
+        }
     }
 
-    $nombreTemporal = $_FILES['imagen']['tmp_name'];
-    $nombreOriginal = basename($_FILES['imagen']['name']);
-    $nombreImagen = time() . '_' . preg_replace("/[^a-zA-Z0-9._-]/", "_", $nombreOriginal);
+    // ────────────────────────────
+    // 4. Procesamiento de campos opcionales
+    // ────────────────────────────
+    $edad = !empty($_POST['edad']) ? intval($_POST['edad']) : null;
+    $raza = $_POST['raza'] ?? null;
+    $tamano = $_POST['tamano'] ?? null;
+    $vacunado = isset($_POST['vacunado']) ? 1 : 0;
+    $desparasitado = isset($_POST['desparasitado']) ? 1 : 0;
+    $duracion = $_POST['duracion'] ?? null;
+    $lugar = $_POST['lugar'] ?? null;
+    $precio = !empty($_POST['precio']) ? floatval($_POST['precio']) : null;
+    $estado_producto = $_POST['estado_producto'] ?? null;
+    $categoria_producto = $_POST['categoria_producto'] ?? null;
+    
+$vacunado = isset($_POST['vacunado']) ? (int)$_POST['vacunado'] : null;
+$desparasitado = isset($_POST['desparasitado']) ? (int)$_POST['desparasitado'] : null;
 
-    if (!move_uploaded_file($nombreTemporal, $directorio . $nombreImagen)) {
-        http_response_code(500);
-        echo json_encode(["success" => false, "message" => "Error al subir la imagen"]);
-        exit;
+
+    // Si no es un servicio, limpiar campos específicos
+    if ($tipo !== 'servicio') {
+        $duracion = null;
+        $lugar = null;
     }
-}
 
-// Preparar la consulta SQL según si precio es NULL o no
-if ($precio === null) {
-    $sql = "INSERT INTO publicaciones (usuario_id, tipo, titulo, descripcion, precio, imagen, fecha_publicacion)
-            VALUES (?, ?, ?, ?, NULL, ?, NOW())";
-    $stmt = $conn->prepare($sql);
+    // ────────────────────────────
+    // 5. Preparar y ejecutar la consulta SQL
+    // ────────────────────────────
+    $stmt = $conn->prepare(
+        "INSERT INTO publicaciones (
+            usuario_id, tipo, titulo, descripcion, imagen,
+            edad, raza, tamano, vacunado, desparasitado,
+            duracion, lugar, precio, estado_producto, categoria_producto,
+            fecha_publicacion, visible
+        ) VALUES (
+            ?, ?, ?, ?, ?,
+            ?, ?, ?, ?, ?,
+            ?, ?, ?, ?, ?,
+            NOW(), 1
+        )"
+    );
+
     if (!$stmt) {
-        http_response_code(500);
-        echo json_encode(["success" => false, "message" => "Error en prepare: " . $conn->error]);
-        exit;
+        throw new Exception('Error en prepare: ' . $conn->error);
     }
-    $stmt->bind_param("issss", $usuario_id, $tipo, $titulo, $descripcion, $nombreImagen);
-} else {
-    $sql = "INSERT INTO publicaciones (usuario_id, tipo, titulo, descripcion, precio, imagen, fecha_publicacion)
-            VALUES (?, ?, ?, ?, ?, ?, NOW())";
-    $stmt = $conn->prepare($sql);
-    if (!$stmt) {
-        http_response_code(500);
-        echo json_encode(["success" => false, "message" => "Error en prepare: " . $conn->error]);
-        exit;
+
+    // Tipos: i = entero, s = string, d = double
+    $stmt->bind_param(
+        "issssssssiissss",
+        $usuario_id,
+        $tipo,
+        $titulo,
+        $descripcion,
+        $imagen,
+        $edad,
+        $raza,
+        $tamano,
+        $vacunado,
+        $desparasitado,
+        $duracion,
+        $lugar,
+        $precio,
+        $estado_producto,
+        $categoria_producto
+    );
+
+    if ($stmt->execute()) {
+        $response['success'] = true;
+        $response['message'] = 'Publicación creada con éxito';
+        $response['id'] = $stmt->insert_id;
+    } else {
+        throw new Exception('Error al ejecutar: ' . $stmt->error);
     }
-    $stmt->bind_param("issdss", $usuario_id, $tipo, $titulo, $descripcion, $precio, $nombreImagen);
+
+    $stmt->close();
+} catch (Exception $e) {
+    $response['message'] = 'Error: ' . $e->getMessage();
+    error_log('Error en crear_publicacion.php: ' . $e->getMessage());
 }
 
-// Ejecutar y responder
-if ($stmt->execute()) {
-    echo json_encode(["success" => true]);
-} else {
-    http_response_code(500);
-    echo json_encode(["success" => false, "message" => "Error al guardar: " . $stmt->error]);
-}
-
-$stmt->close();
 $conn->close();
+header('Content-Type: application/json');
+echo json_encode($response);
 ?>
